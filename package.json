@@ -1,0 +1,33 @@
+{
+  "name": "bodjo-main",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dkaraush/bodjo-main.git"
+  },
+  "keywords": [
+    "bodjo",
+    "nodejs",
+    "server",
+    "api"
+  ],
+  "author": "dkaraush@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dkaraush/bodjo-main/issues"
+  },
+  "homepage": "https://github.com/dkaraush/bodjo-main#readme",
+  "devDependencies": {
+    "colors": "^1.3.3",
+    "crypto": "^1.0.1",
+    "fs": "0.0.1-security",
+    "http": "0.0.0",
+    "mysql": "^2.17.1",
+    "query-string": "^6.8.1"
+  }
+}
