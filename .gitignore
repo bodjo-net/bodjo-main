@@ -1,2 +1,5 @@
 node_modules/
+logs/
+userimages/
 config.json
+_config.json

@@ -1,7 +1,7 @@
 {
   "name": "bodjo-main",
   "version": "1.0.0",
-  "description": "",
+  "description": "Main server of bodjo.net, which serves users, pages, game servers.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,8 +13,9 @@
   "keywords": [
     "bodjo",
     "nodejs",
-    "server",
-    "api"
+    "rest",
+    "api",
+    "http"
   ],
   "author": "dkaraush@gmail.com",
   "license": "ISC",
@@ -23,11 +24,15 @@
   },
   "homepage": "https://github.com/dkaraush/bodjo-main#readme",
   "devDependencies": {
+    "bcrypt": "^3.0.6",
+    "canvas": "^2.5.0",
     "colors": "^1.3.3",
     "crypto": "^1.0.1",
     "fs": "0.0.1-security",
     "http": "0.0.0",
     "mysql": "^2.17.1",
-    "query-string": "^6.8.1"
+    "net": "^1.0.2",
+    "query-string": "^6.8.1",
+    "seedrandom": "^3.0.1"
   }
 }
