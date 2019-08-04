@@ -2,8 +2,7 @@
 module.exports = (db) => {
 	const permissions = require('./../utils/permissions.js')(db);
 	
-	return 
-({	
+	return ({	
 	load: m({
 		id: "require;string"
 	}, async function (p) {
@@ -44,7 +43,7 @@ module.exports = (db) => {
 		if (!req.headers['content-type'].split(/\; {0,}/g).includes('plain/text'))
 			return errObj(2, '"Content-Type" should be "plain/text"');
 
-		if (!permissions.can(p.token, 'pages/publish', p))
+		if (!(await permissions.can(p.token, 'pages/publish', p)))
 			return errObj(3, 'access denied');
 
 		let pages = await db.query(`SELECT \`id\`
@@ -92,7 +91,7 @@ module.exports = (db) => {
 
 		let page = pages[0];
 
-		if (!permissions.can(p.token, 'pages/edit', p, page))
+		if (!(await permissions.can(p.token, 'pages/edit', p, page)))
 			return errObj(4, 'access denied');
 
 		let content = await new Promise((resolve, reject) => {

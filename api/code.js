@@ -22,7 +22,7 @@ module.exports = (db) => ({
 		if (code.length == 0)
 			return errObj(1, 'not found');
 		return okObj(code[0]);
-	})
+	}),
 	save: m({
 		token: 'require;string;token',
 		game: 'require;string'

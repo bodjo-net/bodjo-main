@@ -91,7 +91,7 @@ module.exports = function (instruction, port, db, ssl) {
 			response
 				.then(answer)
 				.catch((e) => {
-					err('error while working on request', e);
+					err(prefix, 'error while working on request', e);
 					answer(errObj(-1, 'Server Error'));
 				})
 		} else {
@@ -110,8 +110,8 @@ module.exports = function (instruction, port, db, ssl) {
 	}
 	server.listen(port, (error) => {
 		if (error)
-			fatalerr('http server listen error', error);
-		log('http server successfully started at', (':'+port).yellow.bold);
+			fatalerr(prefix, 'http server listen error', error);
+		log(prefix, 'http server '+'successfully'.green.bold+' started at', (':'+port).yellow.bold);
 	})
 }
 
@@ -123,6 +123,7 @@ const checkers = {
 	number: checker(v => typeof v === 'number', 'should be a number'),
 	object: checker(v => typeof v === 'object' && v != null && !Array.isArray(v), 'should be an object'),
 	array: checker(v => Array.isArray(v), 'should be an array'),
+	boolean: checker(v => typeof v === 'boolean', 'should be a boolean'),
 	arraylen: checker((v, min, max) => Array.isArray(v) && (typeof min === 'number' ? v.length >= min : true) && (typeof max === 'number' ? v.length <= max : true), (min, max) => `should be an array with ${min}-${max} length`),
 	len: checker((v, min, max) => typeof v === 'string' && (typeof min === 'number' ? v.length >= min : true) && (typeof max === 'number' ? v.length <= max : true), (min, max) => `should be a string with ${min}-${max} length`),
 	range: checker((v, min, max) => typeof v === 'number' && (typeof min === 'number' ? v >= min : true) && (typeof max === 'number' ? v <= max : true), (min, max) => `should be a number in range [${min}; ${max}]`),

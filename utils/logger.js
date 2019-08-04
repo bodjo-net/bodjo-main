@@ -108,3 +108,5 @@ function addZeros(string, n) {
 		return string;
 	return '0'.repeat(n - string.length) + string;
 }
+
+log('[logger] Logging to ' + (LOGS_DIR + logFile).cyan.bold);
