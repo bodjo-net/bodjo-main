@@ -36,6 +36,7 @@ module.exports = function (credentials) {
 						return;
 					}
 
+					debug('[db]', 'SQL command result: ' + (results.length+'').white.bold + ' element' + (results.length==1?'':'s'))
 					resolve(results, fields);
 				})
 			})

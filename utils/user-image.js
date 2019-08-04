@@ -34,7 +34,7 @@ module.exports = (imageDirectory, imagesURL) => {
 			ctx.fillRect(0, 0, W, H);
 
 			let p = W * 0.15;
-			let n = Math.round(2 + random() * 3) * 2;
+			let n = Math.round(3 + random() * 2) * 2;
 			let data = Array.from({length: n/2}, (_, x) => Array.from({length: n}, (_, y) => {
 				return random() > 0.5;
 			}));
@@ -87,6 +87,23 @@ module.exports = (imageDirectory, imagesURL) => {
 					imageobj[dimension] = `${imagesURL}${id}_${dimension}.${ext}`
 			}
 			return imageobj;
+		},
+		upload: function (imageid, req) {
+
+			this.remove(imageid);
+		},
+		remove: function (imageid) {
+			let id = imageid.split('|')[0];
+			let ext = imageid.split('|')[1];
+			debug(prefix, 'removing', imageid.cyan.bold, ' images');
+
+			for (let dimension of dimensions) {
+				let filename = `${imageDirectory}${id}_${dimension}.${ext}`;
+				if (fs.existsSync(filename)) {
+					debug(prefix, `deleting ${filename.magenta.bold}`);
+					fs.unlinkSync(filename);
+				}
+			}
 		}
 	}
 };

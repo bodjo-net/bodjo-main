@@ -30,6 +30,7 @@
     "crypto": "^1.0.1",
     "fs": "0.0.1-security",
     "http": "0.0.0",
+    "multiparty": "^4.2.1",
     "mysql": "^2.17.1",
     "net": "^1.0.2",
     "query-string": "^6.8.1",

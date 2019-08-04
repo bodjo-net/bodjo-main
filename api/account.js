@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const { Form } = require('multiparty');
 
 const tokenExpiration = 1000 * 60 * 60 * 24 * 2;
 const saltRounds = 10;
@@ -119,6 +120,44 @@ module.exports = (db, config) => {
 				});
 			}
 		),
+		uploadImage: m({
+			token: 'require;string;token'
+		}, async function (p, req) {
+			const MAX_IMAGE_SIZE = 1024 * 1024 * 3;
+			if (req.method !== 'POST')
+				return errObj(1, 'method should be POST');
+
+			if (!req.headers['content-type'].split(/\; {0,}/g).includes('multipart/form-data'))
+				return errObj(2, 'method should contain "multipart/form-data" in Content-Type header');
+
+			let length = req.headers['content-length'];
+			let file = await new Promise((resolve, reject) => {
+				let form = new Form({
+					maxFields: 1,
+					maxFieldsSize: MAX_IMAGE_SIZE,
+					maxFilesSize: MAX_IMAGE_SIZE,
+					autoFiles: false
+				});
+				form.on('part', part => {
+					if (part.name != 'image')
+						return;
+
+					
+				});
+				form.parse(req);/*, (error, fields, files) => {
+					if (error) {
+						warn('account/uploadImage formdata parse error', error);
+						reject(error);
+						return;
+					}
+					// debug(fields);
+					debug('files', files);
+					resolve();
+				});*/
+			});
+
+			return okObj();
+		}),
 		info: m({
 			username: 'optional;string;strict;len=3,15',
 			usernames: 'optional;string',
@@ -150,7 +189,14 @@ module.exports = (db, config) => {
 										LIMIT ${usernames.length}`);
 			for (let user of users)
 				user.image = userImage.get(user.image);
-			return okObj({result: users});
+
+			let result = users;
+			if (receivedUsernames) {
+				result = {};
+				for (let username of usernames)
+					result[username] = users.find(u => u.username == username) || null;
+			}
+			return okObj({result});
 		}),
 		changeInfo: m({
 			token: 'require;string;token',

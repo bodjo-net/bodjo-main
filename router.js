@@ -5,6 +5,8 @@ const fingerprint = require('./utils/fingerprint.js');
 
 const favicon = fs.readFileSync('./favicon.png');
 
+const prefix = '[router]';
+
 module.exports = function (instruction, port, db, ssl) {
 	let apis = keys(instruction);
 	function onRequest(req, res) {
@@ -53,32 +55,37 @@ module.exports = function (instruction, port, db, ssl) {
 		}
 
 		let method = api[dirs[1]];
+		let postprefix = '{'+(req.connection.remoteAddress+'').grey.bold+'}';
 		function answer(o) {
 			if (typeof o === 'object' && o != null) {
 				let R = JSON.stringify(o);
+				log(prefix, postprefix, 'returned', R.cyan);
 				res.writeHead(200, {
 					'Content-Type': 'application/json'
 				});
 				res.write(R);
 				res.end();
 			} else if (typeof o === 'string') {
+				log(prefix, postprefix, 'returned', o.cyan);
 				res.writeHead(200, {
 					'Content-Type': 'plain/text'
 				});
 				res.write(o);
 				res.end();
 			} else if (o instanceof Buffer) {
+				log(prefix, postprefix, 'returned', `<Buffer ${o.length}>`.cyan);
 				res.statusCode = 200;
 				res.write(o);
 				res.end();
 			} else {
+				log(prefix, postprefix, 'returned', (o+'').cyan);
 				res.statusCode = 200;
 				res.write(o);
 				res.end();
 			}
 		}
 
-		debug(url.magenta + "");
+		log(prefix, postprefix, `received ${url.magenta} (${keys(query).map(k=>`${k.green.bold} = ${(query[k]+'').blue.bold}`).join(', ')})`);
 		let response = method(query, req, res, db);
 		if (response instanceof Promise) {
 			response
@@ -140,11 +147,13 @@ function parseQueryString(str) {
 	for (let param of params) {
 		let key = decodeURIComponent(param.indexOf('=') >= 0 ? param.substring(0,param.indexOf('=')) : param);
 		let value = decodeURIComponent(param.indexOf('=') >= 0 ? param.substring(param.indexOf('=')+1) : 'true');
-		try {
-			let parseTrying = parseFloat(value);
-			if (!isNaN(parseTrying))
-				value = parseTrying;
-		} catch (e) {}
+		if (/^[\d\.]+$/.test(value.trim())) {
+			try {
+				let parseTrying = parseFloat(value);
+				if (!isNaN(parseTrying))
+					value = parseTrying;
+			} catch (e) {}
+		}
 		if (value === 'true' || value === 'false')
 			value = value === 'true';
 		result[key] = value;
@@ -166,9 +175,13 @@ global.m = function (options, func) {
 						return p === 'true';
 					if (p === 'null') return null;
 					if (p === 'undefined') return undefined;
-					try {
-						return parseFloat(p);
-					} catch (e) {}
+					if (/^[\d\.]+$/.test(p.trim())) {
+						try {
+							let parsed = parseFloat(p);
+							if (!isNaN(parsed))
+								return parsed;
+						} catch (e) {}
+					}
 					return p;
 				});
 				parsedOptions[field][i] = [option.substring(0, option.indexOf('=')), parameters];

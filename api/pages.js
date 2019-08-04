@@ -1,4 +1,9 @@
-module.exports = (db) => ({
+
+module.exports = (db) => {
+	const permissions = require('./../utils/permissions.js')(db);
+	
+	return 
+({	
 	load: m({
 		id: "require;string"
 	}, async function (p) {
@@ -27,7 +32,82 @@ module.exports = (db) => ({
 			page.preview = (page[previewString]);
 			delete page[previewString];
 		}
-		debug(result)
 		return okObj({pages: result});
+	}),
+	publish: m({
+		id: "require;string",
+		token: "require;string;token"
+	}, async function (p, req) {
+		if (req.method !== 'POST')
+			return errObj(1, 'method should be POST');
+
+		if (!req.headers['content-type'].split(/\; {0,}/g).includes('plain/text'))
+			return errObj(2, '"Content-Type" should be "plain/text"');
+
+		if (!permissions.can(p.token, 'pages/publish', p))
+			return errObj(3, 'access denied');
+
+		let pages = await db.query(`SELECT \`id\`
+								   FROM \`bodjo-pages\`
+								   WHERE \`id\`=${escape(p.id)}
+								   LIMIT 1`);
+		if (pages.length > 0)
+			return errObj(4, 'page has been already published; try pages/edit method instead');
+
+		let content = await new Promise((resolve, reject) => {
+			let chunks = [];
+			req.on('data', chunk => chunks.push(chunk));
+			req.on('end', () => {
+				resolve(Buffer.concat(chunks).toString());
+			});
+		});
+
+		await db.query(db.insertQuery({
+			id: p.id,
+			author: p.token.username,
+			'date-published': Date.now(),
+			'date-edited': 0,
+			content
+		}));
+
+		return okObj();
+	}),
+	edit: m({
+		id: "require;string",
+		token: "require;string;token"
+	}, async function (p, req) {
+		if (req.method !== 'POST')
+			return errObj(1, 'method should be POST');
+
+		if (!req.headers['content-type'].split(/\; {0,}/g).includes('plain/text'))
+			return errObj(2, '"Content-Type" should be "plain/text"');
+
+
+		let pages = await db.query(`SELECT \`id\`, \`author\`, \`date-published\`, \`date-edited\` 
+								   FROM \`bodjo-pages\`
+								   WHERE \`id\`=${escape(p.id)}
+								   LIMIT 1`);
+		if (pages.length < 0)
+			return errObj(3, 'page is not found');
+
+		let page = pages[0];
+
+		if (!permissions.can(p.token, 'pages/edit', p, page))
+			return errObj(4, 'access denied');
+
+		let content = await new Promise((resolve, reject) => {
+			let chunks = [];
+			req.on('data', chunk => chunks.push(chunk));
+			req.on('end', () => {
+				resolve(Buffer.concat(chunks).toString());
+			});
+		});
+
+		await db.query(`UPDATE \`bodjo-pages\`
+						SET \`content\`=${escape(content)}, \`date-edited\`=${Date.now()}
+						WHERE \`id\`=${escape(p.id)}`);
+		return okObj();
 	})
 });
+
+};
