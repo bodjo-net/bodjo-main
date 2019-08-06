@@ -149,7 +149,7 @@ function parseQueryString(str) {
 	for (let param of params) {
 		let key = decodeURIComponent(param.indexOf('=') >= 0 ? param.substring(0,param.indexOf('=')) : param);
 		let value = decodeURIComponent(param.indexOf('=') >= 0 ? param.substring(param.indexOf('=')+1) : 'true');
-		if (/^[\d\.]+$/.test(value.trim())) {
+		if (/^[\d\.\,]+$/.test(value.trim()) && (value.match(/\./g)||[]).length <= 1) {
 			try {
 				let parseTrying = parseFloat(value);
 				if (!isNaN(parseTrying))
