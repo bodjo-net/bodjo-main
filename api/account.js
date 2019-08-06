@@ -99,10 +99,9 @@ module.exports = (db, config) => {
 					image: imageid + '|png',
 					permissions: '',
 					score: 0,
-					about: ''
+					about: '',
+					email: typeof p.email === 'string' ? p.email : ''
 				};
-				if (typeof p.email === 'string')
-					newUser.email = p.email;
 
 				await db.query(db.insertQuery('bodjo-users', newUser));
 				let newToken = {
