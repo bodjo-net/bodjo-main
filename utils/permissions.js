@@ -24,7 +24,8 @@ module.exports = (db) => ({
 		if (permissions.all)
 			return true;
 
-		if (methodname == 'pages/edit') {
+		if (methodname == 'pages/edit' ||
+			methodname == 'pages/remove') {
 			let page = special;
 			return (page.author == token.username) || (permissions.pages && includes(permissions.pages, methodparameters.id));
 		}

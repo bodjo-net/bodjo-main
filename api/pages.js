@@ -19,19 +19,23 @@ module.exports = (db) => {
 		q: "require;string",
 		count: "optional;number;range=1,10;default=5",
 		offset: "optional;number;default=0",
-		preview: "optional;number;range=0,50;default=0"
+		preview: "optional;number;range=0,200;default=0"
 	}, async function (p) {
 		let previewString = p.preview > 0 ? `LEFT(\`content\`, ${p.preview})` : '';
-		let result = await db.query(`SELECT \`id\`, \`author\`, \`date-published\`, \`date-edited\`${previewString != '' ? ', '+previewString : ''}
+		let result = await db.query(`SELECT SQL_CALC_FOUND_ROWS \`id\`, \`author\`, \`date-published\`, \`date-edited\`${previewString != '' ? ', '+previewString : ''}
 									 FROM \`bodjo-pages\`
 									 WHERE LOCATE(${escape(p.q)}, \`id\`)>0
 									 LIMIT ${p.count}
 									 OFFSET ${p.offset}`);
+		let total = await db.query(`SELECT FOUND_ROWS();`);
+		if (total.length == 1)
+			total = total[0]['FOUND_ROWS()'];
+		else total = 0;
 		for (let page of result) {
 			page.preview = (page[previewString]);
 			delete page[previewString];
 		}
-		return okObj({pages: result});
+		return okObj({pages: result, offset: p.offset, count: p.count, total});
 	}),
 	publish: m({
 		id: "require;string",
@@ -61,7 +65,7 @@ module.exports = (db) => {
 			});
 		});
 
-		await db.query(db.insertQuery({
+		await db.query(db.insertQuery('bodjo-pages', {
 			id: p.id,
 			author: p.token.username,
 			'date-published': Date.now(),
@@ -104,6 +108,24 @@ module.exports = (db) => {
 
 		await db.query(`UPDATE \`bodjo-pages\`
 						SET \`content\`=${escape(content)}, \`date-edited\`=${Date.now()}
+						WHERE \`id\`=${escape(p.id)}`);
+		return okObj();
+	}),
+	remove: m({
+		token: "require;string;token",
+		id: "require;string"
+	}, async function (p, req) {
+		let pages = await db.query(`SELECT \`id\`, \`author\`, \`date-published\`, \`date-edited\` 
+								   FROM \`bodjo-pages\`
+								   WHERE \`id\`=${escape(p.id)}
+								   LIMIT 1`);
+		if (pages.length < 0)
+			return errObj(0, 'page is not found');
+		let page = pages[0];
+		if (!(await permissions.can(p.token, 'pages/remove', p, page)))
+			return errObj(1, 'access denied');
+
+		await db.query(`DELETE FROM \`bodjo-pages\`
 						WHERE \`id\`=${escape(p.id)}`);
 		return okObj();
 	})

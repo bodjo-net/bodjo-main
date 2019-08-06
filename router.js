@@ -18,6 +18,7 @@ module.exports = function (instruction, port, db, ssl) {
 
 		res.setHeader('Server', 'bodjo-main server (node.js)')
 		res.setHeader('Access-Control-Allow-Origin', '*');
+		res.setHeader('Access-Control-Allow-Headers', '*');
 		
 		if (url === '/favicon.ico') {
 			res.writeHead(200, {

@@ -144,6 +144,8 @@ class GameServer {
 		this.__toSend = [];
 		this.socket = null;
 
+		this.attempts = 0;
+
 		this.connect();
 	}
 
@@ -176,7 +178,8 @@ class GameServer {
 
 		server.status = false;
 		this.socket = new net.Socket();
-		log(prefix, 'attempting to connect to', server.name.cyan.bold, ('('+host+':'+port+')').grey);
+		if (server.attempts < 3)
+			log(prefix, 'attempting to connect to', server.name.cyan.bold, ('('+host+':'+port+')').grey);
 		this.socket.connect(port, host, function () {
 			log(prefix, 'connected to', server.name.cyan.bold);
 			server.socket.write(JSON.stringify({
@@ -198,6 +201,7 @@ class GameServer {
 
 			if (object.type === 'connect') {
 				if (object.status === 'ok') {
+					server.attempts = 0;
 					server.status = true;
 					log(prefix, server.name.cyan.bold + ' authorized ' + 'successfully'.green.bold);
 
@@ -208,7 +212,8 @@ class GameServer {
 					}
 				} else {
 					server.status = false;
-					warn(prefix, server.name.cyan.bold, 'authorization error');
+					if (server.attempts < 3)
+						warn(prefix, server.name.cyan.bold, 'authorization error');
 					server.socket.destroy();
 				}
 			}
@@ -217,12 +222,18 @@ class GameServer {
 			server.status = false;
 			if (!server.working)
 				return;
-			log(prefix, server.name.cyan.bold + ': connection closed', '(will retry after 5sec)'.grey);
+			server.attempts++;
+			if (server.attempts < 3)
+				log(prefix, server.name.cyan.bold + ': connection closed', '(will retry after 5sec)'.grey);
+			else if (server.attempts == 3) {
+				log(prefix, server.name.cyan.bold + ': connection closed 3 times', '(will continue to try to connect without logs)'.grey);
+			}
 			setTimeout(server.connect.bind(server), 5000);
 		});
 		this.socket.on('error', function onError(err) {
 			server.status = false;
-			warn(prefix, 'socket connection error', err);
+			if (server.attempts < 3)
+				warn(prefix, 'socket connection error', err);
 			// setTimeout(server.connect.bind(server), 5000);
 		});
 	}
