@@ -64,7 +64,9 @@ module.exports = (db) => {
 			token: 'require;string;token',
 			name: 'require;string',
 			game: 'require;string',
-			host: 'require;string'
+			host: 'require;string',
+			tcpPort: 'optional;number',
+			httpPort: 'optional;number'
 		}, async function (p) {
 			if (!(await permissions.can(p.token, 'games/new', p)))
 				return errObj(1, 'access denied');
@@ -79,6 +81,11 @@ module.exports = (db) => {
 				host: p.host,
 				secret
 			}
+			if (typeof p.tcpPort === 'number')
+				serverInfo['tcp-port'] = p.tcpPort;
+			if (typeof p.httpPort === 'number')
+				serverInfo['http-port'] = p.httpPort;
+
 			await db.query(db.insertQuery('bodjo-games', serverInfo));
 			servers[p.name] = new GameServer(serverInfo);
 
@@ -88,7 +95,9 @@ module.exports = (db) => {
 			token: 'require;string;token',
 			name: 'require;string',
 			game: 'optional;string',
-			host: 'optional;string'
+			host: 'optional;string',
+			tcpPort: 'optional;number',
+			httpPort: 'optional;number'
 		}, async function (p) {
 			if (!(await permissions.can(p.token, 'games/edit', p)))
 				return errObj(1, 'access denied');
@@ -100,6 +109,10 @@ module.exports = (db) => {
 				newServerInfo.game = p.game;
 			if (typeof p.host === 'string')
 				newServerInfo.host = p.host;
+			if (typeof p.tcpPort === 'number')
+				newServerInfo['tcp-port'] = p.tcpPort;
+			if (typeof p.httpPort === 'number')
+				newServerInfo['http-port'] = p.httpPort;
 
 			await db.query(`UPDATE \`bodjo-games\`
 							SET ${keys(newServerInfo).map(k => '\`'+k+'\` = ' + escape(newServerInfo[k])).join(', ')}
@@ -140,6 +153,9 @@ class GameServer {
 		this.name = info.name;
 		this.host = info.host;
 		this.secret = info.secret;
+		this.tcpPort = info['tcp-port'];
+		this.httpPort = info['http-port'];
+
 		this.__connected = false;
 		this.__toSend = [];
 		this.socket = null;
@@ -154,6 +170,8 @@ class GameServer {
 			name: this.name,
 			game: this.game,
 			host: this.host,
+			tcpPort: this.tcpPort,
+			httpPort: this.httpPort,
 			status: this.status
 		}
 	}
@@ -162,6 +180,8 @@ class GameServer {
 			name: this.name,
 			game: this.game,
 			host: this.host,
+			tcpPort: this.tcpPort,
+			httpPort: this.httpPort,
 			secret: this.secret,
 			status: this.status
 		}
@@ -172,9 +192,8 @@ class GameServer {
 		if (!server.working)
 			return;
 
-		let sIndex = this.host.lastIndexOf(':');
-		let port = sIndex >= 0 ? this.host.substring(sIndex+1) : 3221;
-		let host = sIndex >= 0 ? this.host.substring(0, sIndex) : this.host;
+		let port = this.tcpPort;
+		let host = this.host;
 
 		server.status = false;
 		this.socket = new net.Socket();
