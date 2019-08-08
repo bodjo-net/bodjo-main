@@ -214,10 +214,6 @@ class GameServer {
 		this.__connected = false;
 		this.__toSend = [];
 		this.socket = null;
-
-		this.attempts = 0;
-
-		this.connect();
 	}
 
 	info() {
