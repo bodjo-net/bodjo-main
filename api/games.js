@@ -151,7 +151,7 @@ async function start(db, port) {
 	net.createServer((socket) => {
 		let serverName = null;
 		let authorized = false;
-
+		log(prefix, 'Somebody connected to TCP server.');
 		socket.on('data', function (message) {
 			if (message instanceof Buffer)
 				message = message.toString();
@@ -182,7 +182,7 @@ async function start(db, port) {
 				servers[serverName].socket = socket;
 				servers[serverName].onConnect();
 
-				log(prefix, serverName.magenta.bold + ' connected', 'successfully'.green.bold);
+				log(prefix, serverName.magenta.bold + ' connected and authorized', 'successfully'.green.bold);
 			}
 		});
 
@@ -194,7 +194,7 @@ async function start(db, port) {
 			}
 		}
 		socket.on('error', function (error) {
-			warn(prefix, error);
+			// warn(prefix, 'Error.' error);
 			onDisconnect();
 		})
 		socket.on('disconnect', onDisconnect);
@@ -314,10 +314,10 @@ class GameServer {
 	}
 
 	onConnect() {
-		if (server.__toSend.length > 0) {
-			for (let message of server.__toSend)
-				server.socket.write(message);
-			server.__toSend = [];
+		if (this.__toSend.length > 0) {
+			for (let message of this.__toSend)
+				this.socket.write(message);
+			this.__toSend = [];
 		}
 	}
 
