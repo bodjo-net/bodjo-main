@@ -29,8 +29,8 @@ module.exports = (db) => ({
 	}, async function (p, req) {
 		if (req.method !== 'POST')
 			return errObj(1, 'method should be POST');
-		if (!req.headers['content-type'].split(/\; {0,}/g).includes('plain/text'))
-			return errObj(2, 'method should contain "plain/text" in Content-Type header');
+		// if (!req.headers['content-type'].split(/\; {0,}/g).includes('plain/text'))
+			// return errObj(2, 'method should contain "plain/text" in Content-Type header');
 
 		let games = await db.query(`SELECT \`game\` FROM \`bodjo-games\``);
 		let found = false;
