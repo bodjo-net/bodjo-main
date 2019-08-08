@@ -36,6 +36,7 @@ module.exports = (db) => ({
 
 		if (methodname == 'games/new' ||
 			methodname == 'games/edit' ||
+			methodname == 'games/remove' ||
 			methodname == 'games/info') {
 			return (permissions.games && includes(permissions.games, methodparameters.name));
 		}

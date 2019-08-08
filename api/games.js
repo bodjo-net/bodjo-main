@@ -5,8 +5,8 @@ var prefix = '[games]';
 let tokens = {};
 let servers = {};
 
-module.exports = (db) => {
-	start(db);
+module.exports = (db, port) => {
+	start(db, port);
 	const permissions = require('./../utils/permissions.js')(db);
 
 	return {
@@ -64,9 +64,7 @@ module.exports = (db) => {
 			token: 'require;string;token',
 			name: 'require;string',
 			game: 'require;string',
-			host: 'require;string',
-			tcpPort: 'optional;number',
-			httpPort: 'optional;number'
+			host: 'require;string'
 		}, async function (p) {
 			if (!(await permissions.can(p.token, 'games/new', p)))
 				return errObj(1, 'access denied');
@@ -81,10 +79,6 @@ module.exports = (db) => {
 				host: p.host,
 				secret
 			}
-			if (typeof p.tcpPort === 'number')
-				serverInfo['tcp-port'] = p.tcpPort;
-			if (typeof p.httpPort === 'number')
-				serverInfo['http-port'] = p.httpPort;
 
 			await db.query(db.insertQuery('bodjo-games', serverInfo));
 			servers[p.name] = new GameServer(serverInfo);
@@ -95,9 +89,7 @@ module.exports = (db) => {
 			token: 'require;string;token',
 			name: 'require;string',
 			game: 'optional;string',
-			host: 'optional;string',
-			tcpPort: 'optional;number',
-			httpPort: 'optional;number'
+			host: 'optional;string'
 		}, async function (p) {
 			if (!(await permissions.can(p.token, 'games/edit', p)))
 				return errObj(1, 'access denied');
@@ -109,10 +101,6 @@ module.exports = (db) => {
 				newServerInfo.game = p.game;
 			if (typeof p.host === 'string')
 				newServerInfo.host = p.host;
-			if (typeof p.tcpPort === 'number')
-				newServerInfo['tcp-port'] = p.tcpPort;
-			if (typeof p.httpPort === 'number')
-				newServerInfo['http-port'] = p.httpPort;
 
 			await db.query(`UPDATE \`bodjo-games\`
 							SET ${keys(newServerInfo).map(k => '\`'+k+'\` = ' + escape(newServerInfo[k])).join(', ')}
@@ -129,32 +117,99 @@ module.exports = (db) => {
 				if (typeof p.host === 'string')
 					info.host = p.host;
 
-				servers[p.name].working = false;
+				// TODO: disconnect socket
 				delete servers[p.name];
 				servers[p.name] = new GameServer(info);
 			}
+			return okObj();
+		}),
+		remove: m({
+			token: 'require;string;token',
+			name: 'require;string'
+		}, async function (p) {
+			if (!(await permissions.can(p.token, 'games/remove', p)))
+				return errObj(1, 'access denied');
+
+			if (!servers[p.name])
+				return errObj(2, 'game server is missing');
+
+			servers[p.name].stop();
+			delete servers[p.name];
+
+			await db.query(`DELETE FROM \`bodjo-games\`
+							WHERE \`name\`=${escape(p.name)}`);
 			return okObj();
 		})
 	};
 }
 
-async function start(db) {
+async function start(db, port) {
 	let serversInfo = await db.query(`SELECT * FROM \`bodjo-games\``);
 	for (let serverInfo of serversInfo)
 		servers[serverInfo.name] = new GameServer(serverInfo);
+
+	net.createServer((socket) => {
+		let serverName = null;
+		let authorized = false;
+
+		socket.on('data', function (message) {
+			if (message instanceof Buffer)
+				message = message.toString();
+			if (typeof message !== 'string')
+				return;
+
+			let object = null;
+			try {
+				object = JSON.parse(message);
+			} catch (e) { return; }
+
+			if (object.type === 'connect') {
+				if (typeof object.name !== 'string' ||
+					typeof object.secret !== 'string' ||
+					!servers[object.name] ||
+					servers[object.name].secret !== object.secret ||
+					servers[object.name].status) {
+					socket.write(JSON.stringify({type: 'connect', status: 'fail'}));
+					return;
+				}
+
+				serverName = object.name;
+				authorized = true;
+
+				socket.write(JSON.stringify({type:'connect',status:'ok'}));
+
+				servers[serverName].status = true;
+				servers[serverName].socket = socket;
+				servers[serverName].onConnect();
+
+				log(prefix, serverName.magenta.bold + ' connected', 'successfully'.green.bold);
+			}
+		});
+
+		function onDisconnect() {
+			if (authorized && serverName != null) {
+				log(prefix, serverName.magenta.bold + ' disconnected');
+				servers[serverName].status = false;
+				servers[serverName].socket = null;
+			}
+		}
+		socket.on('error', function (error) {
+			warn(prefix, error);
+			onDisconnect();
+		})
+		socket.on('disconnect', onDisconnect);
+		socket.on('close', onDisconnect);
+	}).listen(port || 3221);
 }
 
 class GameServer {
 	constructor(info) {
 		this.status = false;
-		this.working = true;
 
 		this.game = info.game;
 		this.name = info.name;
 		this.host = info.host;
 		this.secret = info.secret;
-		this.tcpPort = info['tcp-port'];
-		this.httpPort = info['http-port'];
 
 		this.__connected = false;
 		this.__toSend = [];
@@ -170,8 +225,6 @@ class GameServer {
 			name: this.name,
 			game: this.game,
 			host: this.host,
-			tcpPort: this.tcpPort,
-			httpPort: this.httpPort,
 			status: this.status
 		}
 	}
@@ -180,82 +233,76 @@ class GameServer {
 			name: this.name,
 			game: this.game,
 			host: this.host,
-			tcpPort: this.tcpPort,
-			httpPort: this.httpPort,
 			secret: this.secret,
 			status: this.status
 		}
 	}
 
-	connect() {
-		let server = this;
-		if (!server.working)
-			return;
+	// connect() {
+	// 	let server = this;
 
-		let port = this.tcpPort;
-		let host = this.host;
+	// 	let port = this.tcpPort;
+	// 	let host = this.host;
 
-		server.status = false;
-		this.socket = new net.Socket();
-		if (server.attempts < 3)
-			log(prefix, 'attempting to connect to', server.name.cyan.bold, ('('+host+':'+port+')').grey);
-		this.socket.connect(port, host, function () {
-			log(prefix, 'connected to', server.name.cyan.bold);
-			server.socket.write(JSON.stringify({
-				type: 'connect', 
-				name: server.name,
-				secret: server.secret
-			}));
-		});
-		this.socket.on('data', function onMessage(message) {
-			if (message instanceof Buffer)
-				message = message.toString();
-			if (typeof message !== 'string')
-				return;
+	// 	server.status = false;
+	// 	this.socket = new net.Socket();
+	// 	if (server.attempts < 3)
+	// 		log(prefix, 'attempting to connect to', server.name.cyan.bold, ('('+host+':'+port+')').grey);
+	// 	this.socket.connect(port, host, function () {
+	// 		log(prefix, 'connected to', server.name.cyan.bold);
+	// 		server.socket.write(JSON.stringify({
+	// 			type: 'connect', 
+	// 			name: server.name,
+	// 			secret: server.secret
+	// 		}));
+	// 	});
+	// 	this.socket.on('data', function onMessage(message) {
+	// 		if (message instanceof Buffer)
+	// 			message = message.toString();
+	// 		if (typeof message !== 'string')
+	// 			return;
 
-			let object;
-			try {
-				object = JSON.parse(message);
-			} catch (e) {return; }
+	// 		let object;
+	// 		try {
+	// 			object = JSON.parse(message);
+	// 		} catch (e) {return; }
 
-			if (object.type === 'connect') {
-				if (object.status === 'ok') {
-					server.attempts = 0;
-					server.status = true;
-					log(prefix, server.name.cyan.bold + ' authorized ' + 'successfully'.green.bold);
+	// 		if (object.type === 'connect') {
+	// 			if (object.status === 'ok') {
+	// 				server.attempts = 0;
+	// 				server.status = true;
+	// 				log(prefix, server.name.cyan.bold + ' authorized ' + 'successfully'.green.bold);
 
-					if (server.__toSend.length > 0) {
-						for (let message of server.__toSend)
-							server.socket.write(message);
-						server.__toSend = [];
-					}
-				} else {
-					server.status = false;
-					if (server.attempts < 3)
-						warn(prefix, server.name.cyan.bold, 'authorization error');
-					server.socket.destroy();
-				}
-			}
-		});
-		this.socket.on('close', function onClose() {
-			server.status = false;
-			if (!server.working)
-				return;
-			server.attempts++;
-			if (server.attempts < 3)
-				log(prefix, server.name.cyan.bold + ': connection closed', '(will retry after 5sec)'.grey);
-			else if (server.attempts == 3) {
-				log(prefix, server.name.cyan.bold + ': connection closed 3 times', '(will continue to try to connect without logs)'.grey);
-			}
-			setTimeout(server.connect.bind(server), 5000);
-		});
-		this.socket.on('error', function onError(err) {
-			server.status = false;
-			if (server.attempts < 3)
-				warn(prefix, 'socket connection error', err);
-			// setTimeout(server.connect.bind(server), 5000);
-		});
-	}
+	// 				if (server.__toSend.length > 0) {
+	// 					for (let message of server.__toSend)
+	// 						server.socket.write(message);
+	// 					server.__toSend = [];
+	// 				}
+	// 			} else {
+	// 				server.status = false;
+	// 				if (server.attempts < 3)
+	// 					warn(prefix, server.name.cyan.bold, 'authorization error');
+	// 				server.socket.destroy();
+	// 			}
+	// 		}
+	// 	});
+	// 	this.socket.on('close', function onClose() {
+	// 		server.status = false;
+	// 		server.attempts++;
+	// 		if (server.attempts < 3)
+	// 			log(prefix, server.name.cyan.bold + ': connection closed', '(will retry after 5sec)'.grey);
+	// 		else if (server.attempts == 3) {
+	// 			log(prefix, server.name.cyan.bold + ': connection closed 3 times', '(will continue to try to connect without logs)'.grey);
+	// 		}
+	// 		setTimeout(server.connect.bind(server), 5000);
+	// 	});
+	// 	this.socket.on('error', function onError(err) {
+	// 		server.status = false;
+	// 		if (server.attempts < 3)
+	// 			warn(prefix, 'socket connection error', err);
+	// 		// setTimeout(server.connect.bind(server), 5000);
+	// 	});
+	// }
 
 	addPlayer(username, token) {
 		let message = JSON.stringify({
@@ -263,10 +310,25 @@ class GameServer {
 			username, token
 		});
 
-		if (this.status) {
+		if (this.status && this.socket != null) {
 			this.socket.write(message)
 		} else {
 			this.__toSend.push(message);
+		}
+	}
+
+	onConnect() {
+		if (server.__toSend.length > 0) {
+			for (let message of server.__toSend)
+				server.socket.write(message);
+			server.__toSend = [];
+		}
+	}
+
+	stop() {
+		if (this.status && this.socket != null) {
+			log(prefix, server.name.cyan.bold + ': disconnecting');
+			this.socket.destroy();
 		}
 	}
 }
