@@ -31,6 +31,7 @@ module.exports = (db) => {
 		let result = await db.query(`SELECT SQL_CALC_FOUND_ROWS \`id\`, \`author\`, \`date-published\`, \`date-edited\`${previewString != '' ? ', '+previewString : ''}
 									 FROM \`bodjo-pages\`
 									 WHERE LOCATE(${escape(p.q)}, \`id\`)>0
+									 ORDER BY \`id\` ASC
 									 LIMIT ${p.count}
 									 OFFSET ${p.offset}`);
 		let total = await db.query(`SELECT FOUND_ROWS();`);
