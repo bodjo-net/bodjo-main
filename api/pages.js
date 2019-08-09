@@ -25,13 +25,14 @@ module.exports = (db) => {
 		q: "require;string",
 		count: "optional;number;range=1,10;default=5",
 		offset: "optional;number;default=0",
-		preview: "optional;number;range=1,200;default=0"
+		preview: "optional;number;range=1,200;default=0",
+		sort: "optional;boolean;default=true"
 	}, async function (p) {
 		let previewString = p.preview > 0 ? `LEFT(\`content\`,IF(POSITION('~~~~~' IN \`content\`)>0,POSITION('~~~~~' IN \`content\`)-1,${p.preview}))` : '';
 		let result = await db.query(`SELECT SQL_CALC_FOUND_ROWS \`id\`, \`author\`, \`date-published\`, \`date-edited\`${previewString != '' ? ', '+previewString : ''}
 									 FROM \`bodjo-pages\`
 									 WHERE LOCATE(${escape(p.q)}, \`id\`)>0
-									 ORDER BY \`id\` ASC
+									 ORDER BY \`id\` ${p.sort?'ASC':'DESC'}
 									 LIMIT ${p.count}
 									 OFFSET ${p.offset}`);
 		let total = await db.query(`SELECT FOUND_ROWS();`);
