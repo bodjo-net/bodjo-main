@@ -154,7 +154,7 @@ async function start(db, port) {
 		log(prefix, 'Somebody connected to TCP server.');
 		let heartbeat = Date.now();
 		let interval = setInterval(function () {
-			if (Date.now() - heartbeat > 10000) {
+			if (Date.now() - heartbeat > 15000) {
 				if (authorized)
 					warn(prefix, serverName.magenta.bold + ' didn\'t send "ping" message more than 10s', '(closing connection)'.grey);
 				socket.destroy();
