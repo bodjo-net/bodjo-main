@@ -152,11 +152,24 @@ async function start(db, port) {
 		let serverName = null;
 		let authorized = false;
 		log(prefix, 'Somebody connected to TCP server.');
+		let heartbeat = Date.now();
+		let interval = setInterval(function () {
+			if (Date.now() - heartbeat > 10000) {
+				if (authorized)
+					warn(prefix, serverName.magenta.bold + ' didn\'t send "ping" message more than 10s', '(closing connection)'.grey);
+				socket.destroy();
+			}
+		}, 15000);
 		socket.on('data', function (message) {
 			if (message instanceof Buffer)
 				message = message.toString();
 			if (typeof message !== 'string')
 				return;
+			if (message === 'ping') {
+				heartbeat = Date.now();
+				socket.write('pong');
+				return;
+			}
 
 			let object = null;
 			try {
@@ -185,18 +198,17 @@ async function start(db, port) {
 				log(prefix, serverName.magenta.bold + ' connected and authorized', 'successfully'.green.bold);
 			}
 		});
-
 		function onDisconnect() {
 			if (authorized && serverName != null) {
 				log(prefix, serverName.magenta.bold + ' disconnected');
 				servers[serverName].status = false;
 				servers[serverName].socket = null;
 			}
+
+			if (interval)
+				clearInterval(interval);
 		}
-		socket.on('error', function (error) {
-			// warn(prefix, 'Error.' error);
-			onDisconnect();
-		})
+		socket.on('error', onDisconnect());
 		socket.on('disconnect', onDisconnect);
 		socket.on('close', onDisconnect);
 	}).listen(port || 3221);
