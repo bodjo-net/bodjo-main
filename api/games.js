@@ -208,7 +208,7 @@ async function start(db, port) {
 			if (interval)
 				clearInterval(interval);
 		}
-		socket.on('error', onDisconnect());
+		socket.on('error', onDisconnect);
 		socket.on('disconnect', onDisconnect);
 		socket.on('close', onDisconnect);
 	}).listen(port || 3221);
