@@ -1,5 +1,5 @@
 const http = require('http');
-const crypto = require('crypto');
+const https = require('https');
 const fs = require('fs');
 const fingerprint = require('./utils/fingerprint.js');
 
@@ -100,15 +100,15 @@ module.exports = function (instruction, port, db, ssl) {
 		}
 	}
 
-	let server = http.createServer();
-	server.addListener('request', onRequest);
+	let server;
 	if (ssl && requireKeys(ssl, ['cert', 'key'], 'ssl options', false)) {
-		let cert = fs.readFileSync(ssl.cert).toString();
-		let key = fs.readFileSync(ssl.key).toString();
+		let cert = fs.readFileSync(ssl.cert);
+		let key = fs.readFileSync(ssl.key);
 
-		let credentials = crypto.createCredentials({key, cert});
-		server.setSecure(credentials);
-	}
+		// let credentials = crypto.createCredentials({key, cert});
+		server = https.createServer({key, cert}, onRequest);
+	} else
+		server = http.createServer(onRequest);
 	server.listen(port, (error) => {
 		if (error)
 			fatalerr(prefix, 'http server listen error', error);
