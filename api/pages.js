@@ -8,7 +8,7 @@ module.exports = (db) => {
 		preview: "optional;boolean;default=false"
 	}, async function (p) {
 		let previewString = p.preview ? `LEFT(\`content\`,IF(POSITION('~~~~~' IN \`content\`)>0,POSITION('~~~~~' IN \`content\`)-1,200))` : '';
-		let pages = await db.query(`SELECT \`id\`,\`author\`,\`date-published\`,\`date-edited\`${previewString.length>0?','+previewString:''}
+		let pages = await db.query(`SELECT \`id\`,\`author\`,\`date-published\`,\`date-edited\`, ${previewString.length>0?','+previewString:'`content`'}
 								   FROM \`bodjo-pages\`
 								   WHERE \`id\`=${escape(p.id)}
 								   LIMIT 1;`);
