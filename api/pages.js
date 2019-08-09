@@ -4,24 +4,30 @@ module.exports = (db) => {
 	
 	return ({	
 	load: m({
-		id: "require;string"
+		id: "require;string",
+		preview: "optional;boolean;default=false"
 	}, async function (p) {
-		let pages = await db.query(`SELECT *
+		let previewString = p.preview ? `LEFT(\`content\`,IF(POSITION('~~~~~' IN \`content\`)>0,POSITION('~~~~~' IN \`content\`)-1,200))` : '';
+		let pages = await db.query(`SELECT \`id\`,\`author\`,\`date-published\`,\`date-edited\`${previewString.length>0?','+previewString:''}
 								   FROM \`bodjo-pages\`
 								   WHERE \`id\`=${escape(p.id)}
 								   LIMIT 1;`);
 		if (pages.length == 0)
 			return errObj(1, 'page is not found');
-
-		return okObj({page: pages[0]});
+		let page = pages[0];
+		if (previewString.length > 0) {
+			page.content = page[previewString];
+			delete page[previewString];
+		}
+		return okObj({page});
 	}),
 	search: m({
 		q: "require;string",
 		count: "optional;number;range=1,10;default=5",
 		offset: "optional;number;default=0",
-		preview: "optional;number;range=0,200;default=0"
+		preview: "optional;number;range=1,200;default=0"
 	}, async function (p) {
-		let previewString = p.preview > 0 ? `LEFT(\`content\`, ${p.preview})` : '';
+		let previewString = p.preview > 0 ? `LEFT(\`content\`,IF(POSITION('~~~~~' IN \`content\`)>0,POSITION('~~~~~' IN \`content\`)-1,${p.preview}))` : '';
 		let result = await db.query(`SELECT SQL_CALC_FOUND_ROWS \`id\`, \`author\`, \`date-published\`, \`date-edited\`${previewString != '' ? ', '+previewString : ''}
 									 FROM \`bodjo-pages\`
 									 WHERE LOCATE(${escape(p.q)}, \`id\`)>0
