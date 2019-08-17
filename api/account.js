@@ -79,7 +79,7 @@ module.exports = (db, config) => {
 			{
 				token: 'require;string;token'	
 			},
-			function (p) {
+			async function (p) {
 				await db.query(`DELETE FROM \`bodjo-tokens\`
 								WHERE \`value\`=${escape(p.token.value)}`);
 				return okObj();
