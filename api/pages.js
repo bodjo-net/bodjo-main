@@ -2,7 +2,8 @@
 module.exports = (db) => {
 	const permissions = require('./../utils/permissions.js')(db);
 	
-	return ({	
+	return ({
+		
 	load: m({
 		id: "require;string",
 		preview: "optional;boolean;default=false"

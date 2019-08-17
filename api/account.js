@@ -75,6 +75,16 @@ module.exports = (db, config) => {
 				}
 			}
 		),
+		logout: m(
+			{
+				token: 'require;string;token'	
+			},
+			function (p) {
+				await db.query(`DELETE FROM \`bodjo-tokens\`
+								WHERE \`value\`=${escape(p.token.value)}`);
+				return okObj();
+			}
+		),
 		register: m(
 			{
 				username: 'require;string;len=3,15;strict',
