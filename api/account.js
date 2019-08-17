@@ -114,8 +114,7 @@ module.exports = (db, config) => {
 
 				delete newToken.data;
 				return okObj({
-					token: newToken,
-					image: imageid + '|png'
+					token: newToken
 				});
 			}
 		),
@@ -199,7 +198,7 @@ module.exports = (db, config) => {
 		}),
 		changeInfo: m({
 			token: 'require;string;token',
-			email: 'optional;string;email',
+			email: 'optional;string;len=0,4;email',
 			about: 'optional;string;len=0,250'
 		}, async function (p) {
 			let newInfo = {};
