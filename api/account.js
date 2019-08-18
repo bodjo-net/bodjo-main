@@ -129,7 +129,8 @@ module.exports = (db, config) => {
 			}
 		),
 		uploadImage: m({
-			token: 'require;string;token'
+			token: 'require;string;token',
+			ext: 'require;string'
 		}, async function (p, req) {
 			const MAX_IMAGE_SIZE = 1024 * 1024 * 3;
 			if (req.method !== 'POST')
@@ -137,6 +138,17 @@ module.exports = (db, config) => {
 
 			if (!req.headers['content-type'].split(/\; {0,}/g).includes('multipart/form-data'))
 				return errObj(2, 'method should contain "multipart/form-data" in Content-Type header');
+
+			if (!['png','jpg','jpeg','gif'].includes(p.ext))
+				return errObj(3, 'parameter "ext" should be: png, jpg, jpeg, gif', 'ext');
+
+			let user = await db.query(`SELECT \`image\`
+									FROM \`bodjo-users\`
+									WHERE \`username\`=${escape(p.token.username)}
+									LIMIT 1`);
+			if (user.length < 1)
+				return errObj(4, 'user was not found', 'token');
+			user = user[0];
 
 			let length = req.headers['content-length'];
 			let file = await new Promise((resolve, reject) => {
@@ -147,23 +159,40 @@ module.exports = (db, config) => {
 					autoFiles: false
 				});
 				form.on('part', part => {
-					if (part.name != 'image')
-						return;
-
-					
-				});
-				form.parse(req);/*, (error, fields, files) => {
-					if (error) {
-						warn('account/uploadImage formdata parse error', error);
-						reject(error);
+					if (part.name != 'image') {
+						part.resume();
 						return;
 					}
-					// debug(fields);
-					debug('files', files);
-					resolve();
-				});*/
-			});
 
+					if (part.byteCount > MAX_IMAGE_SIZE) {
+						part.resume();
+						resolve(-1);
+					} else 
+						resolve(part);
+				});
+				form.on('error', error => {
+					warn('multipart form data receive error:', error);
+					reject(error);
+				})
+				form.parse(req);
+			});
+			if (file == -1)
+				return errObj(5, 'image is too big (max: 3KB)');
+
+			// let buffer = await new Promise((resolve, reject) => {
+			// 	let chunks = [];
+			// 	file.on('data', chunk => chunks.push(chunk));
+			// 	file.on('end', () => {
+			// 		resolve(Buffer.concat(chunks));
+			// 	});
+			// 	file.on('error', reject);
+			// });
+
+			let imageid = user.image.split('|')[0]
+			await userImage.upload(user.image, file, p.ext);
+			await db.query(`UPDATE \`bodjo-users\`
+							SET \`image\`='${imageid}|${p.ext}'
+							WHERE \`username\`=${escape(p.token.username)}`);
 			return okObj();
 		}),
 		info: m({
@@ -206,7 +235,7 @@ module.exports = (db, config) => {
 			}
 			return okObj({result});
 		}),
-		changeInfo: m({
+		edit: m({
 			token: 'require;string;token',
 			email: 'optional;string;len=0,4;email',
 			about: 'optional;string;len=0,250'

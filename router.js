@@ -92,7 +92,7 @@ module.exports = function (instruction, port, db, ssl) {
 			response
 				.then(answer)
 				.catch((e) => {
-					err(prefix, 'error while working on request', e);
+					err(prefix, 'error while working on request'.bold, e);
 					answer(errObj(-1, 'Server Error'));
 				})
 		} else {

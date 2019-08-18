@@ -1,4 +1,5 @@
 const fs = require('fs');
+const child_process = require('child_process');
 const seedrandom = require('seedrandom');
 const { createCanvas, Image } = require('canvas');
 
@@ -88,14 +89,39 @@ module.exports = (imageDirectory, imagesURL) => {
 			}
 			return imageobj;
 		},
-		upload: function (imageid, req) {
-
+		upload: async function (imageid, file, ext) {
 			this.remove(imageid);
+
+			let id = imageid.split('|')[0];
+			let source = `${imageDirectory}${id}.${ext}`;
+			await new Promise((resolve, reject) => {
+				file.pipe(fs.createWriteStream(source)).on('finish', resolve);
+			});
+
+			await Promise.all(Array.from(dimensions, 
+				dimension => new Promise((resolve, reject) => {
+					let dest = `${imageDirectory}${id}_${dimension}.${ext}`;
+					let ffmpeg = child_process.spawn('ffmpeg', [
+						'-i', source, 
+						'-vf', 'scale=(iw*sar)*max(X/(iw*sar)\\,X/ih):ih*max(X/(iw*sar)\\,X/ih),crop=X:X'.replace(/X/g,dimension), 
+						dest
+					]);
+					// ffmpeg.stdout.on('data', d => debug(d.toString()));
+					// ffmpeg.stderr.on('data', d => warn(d.toString()));
+					ffmpeg.on('close', (code) => {
+						if (code == 0)
+							resolve();
+						else reject();
+					})
+				})
+			));
+
+			fs.unlinkSync(source);
 		},
 		remove: function (imageid) {
 			let id = imageid.split('|')[0];
 			let ext = imageid.split('|')[1];
-			debug(prefix, 'removing', imageid.cyan.bold, ' images');
+			debug(prefix, 'removing', imageid.cyan.bold, 'images');
 
 			for (let dimension of dimensions) {
 				let filename = `${imageDirectory}${id}_${dimension}.${ext}`;
