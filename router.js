@@ -58,6 +58,11 @@ module.exports = function (instruction, port, db, ssl) {
 		let method = api[dirs[1]];
 		let postprefix = '{'+(req.connection.remoteAddress+'').grey.bold+'}';
 		function answer(o) {
+			if (res.connection.destroyed ||
+				res.connection.finished) {
+				log(prefix, postprefix, 'request destroyed');
+				return;
+			}
 			if (typeof o === 'object' && o != null) {
 				let R = JSON.stringify(o);
 				log(prefix, postprefix, 'returned', short(R).cyan);
