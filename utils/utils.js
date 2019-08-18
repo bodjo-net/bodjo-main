@@ -46,3 +46,6 @@ global.requireKeys = function (obj, requiredKeys, name, fatal = true) {
 global.randomString = function (n = 16) {
 	return Array.from({length:n},()=>(q="qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890")[Math.round(Math.random()*(n-1))]).join('');
 }
+global.short = function (string, n = 50) {
+	return string.length > n ? string.slice(0, n)+'...' : string;
+} 

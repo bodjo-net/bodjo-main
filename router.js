@@ -60,14 +60,14 @@ module.exports = function (instruction, port, db, ssl) {
 		function answer(o) {
 			if (typeof o === 'object' && o != null) {
 				let R = JSON.stringify(o);
-				log(prefix, postprefix, 'returned', R.slice(100).cyan);
+				log(prefix, postprefix, 'returned', short(R).cyan);
 				res.writeHead(200, {
 					'Content-Type': 'application/json'
 				});
 				res.write(R);
 				res.end();
 			} else if (typeof o === 'string') {
-				log(prefix, postprefix, 'returned', o.slice(100).cyan);
+				log(prefix, postprefix, 'returned', short(o).cyan);
 				res.writeHead(200, {
 					'Content-Type': 'plain/text'
 				});
@@ -79,7 +79,7 @@ module.exports = function (instruction, port, db, ssl) {
 				res.write(o);
 				res.end();
 			} else {
-				log(prefix, postprefix, 'returned', (o+'').slice(100).cyan);
+				log(prefix, postprefix, 'returned', short(o+'').cyan);
 				res.statusCode = 200;
 				res.write(o);
 				res.end();
