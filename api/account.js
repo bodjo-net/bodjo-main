@@ -193,7 +193,7 @@ module.exports = (db, config) => {
 			await db.query(`UPDATE \`bodjo-users\`
 							SET \`image\`='${imageid}|${p.ext}'
 							WHERE \`username\`=${escape(p.token.username)}`);
-			return okObj();
+			return okObj(userImage.get(imageid+'|'+p.ext));
 		}),
 		info: m({
 			username: 'optional;string;strict;len=3,15',

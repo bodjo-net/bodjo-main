@@ -95,7 +95,10 @@ module.exports = (imageDirectory, imagesURL) => {
 			let id = imageid.split('|')[0];
 			let source = `${imageDirectory}${id}.${ext}`;
 			await new Promise((resolve, reject) => {
-				file.pipe(fs.createWriteStream(source)).on('finish', resolve);
+				file.pipe(fs.createWriteStream(source)).on('finish', () => {
+					resolve();
+					file.resume();
+				});
 			});
 
 			await Promise.all(Array.from(dimensions, 
