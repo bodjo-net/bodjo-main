@@ -1,13 +1,19 @@
-
+let CACHE_TIME = 1000 * 60 * 60 * 6;
+let CACHE = {};
 module.exports = (db) => {
 	const permissions = require('./../utils/permissions.js')(db);
 	
 	return ({
-		
+
 	load: m({
 		id: "require;string",
 		preview: "optional;boolean;default=false"
 	}, async function (p) {
+		if (CACHE[escape(p.id.trim())+p.preview] &&
+			Date.now() - CACHE[escape(p.id.trim())+p.preview].time < CACHE_TIME) {
+			return CACHE[escape(p.id.trim())+p.preview].value;
+		}
+
 		let previewString = p.preview ? `LEFT(\`content\`,IF(POSITION('~~~~~' IN \`content\`)>0,POSITION('~~~~~' IN \`content\`)-1,200))` : '';
 		let pages = await db.query(`SELECT \`id\`,\`author\`,\`date-published\`,\`date-edited\`, ${previewString.length>0?','+previewString:'`content`'}
 								   FROM \`bodjo-pages\`
@@ -20,6 +26,10 @@ module.exports = (db) => {
 			page.content = page[previewString];
 			delete page[previewString];
 		}
+		CACHE[escape(p.id.trim())+p.preview] = {
+			value: okObj({page}),
+			time: Date.now()
+		};
 		return okObj({page});
 	}),
 	search: m({
@@ -115,6 +125,9 @@ module.exports = (db) => {
 			});
 		});
 
+		delete CACHE[escape(p.id.trim())+true];
+		delete CACHE[escape(p.id.trim())+false];
+
 		await db.query(`UPDATE \`bodjo-pages\`
 						SET \`content\`=${escape(content)}, \`date-edited\`=${Date.now()}
 						WHERE \`id\`=${escape(p.id)}`);
@@ -134,6 +147,9 @@ module.exports = (db) => {
 		if (!(await permissions.can(p.token, 'pages/remove', p, page)))
 			return errObj(1, 'access denied');
 
+		delete CACHE[escape(p.id.trim())+true];
+		delete CACHE[escape(p.id.trim())+false];
+		
 		await db.query(`DELETE FROM \`bodjo-pages\`
 						WHERE \`id\`=${escape(p.id)}`);
 		return okObj();

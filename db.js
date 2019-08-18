@@ -26,7 +26,7 @@ module.exports = function (credentials) {
 	return {
 		end: connection.end.bind(connection),
 		query: function (query) {
-			query = query.replace(/[\r\n\t]+/g, '\n');
+			query = query.replace(/[\r\n\t]{1,}[ ]{0,}[\r\n\t]{0,}/g, '\n');
 			return new Promise((resolve, reject) => {
 				debug('[db]', 'SQL command query:', (query.includes('\n') ? '\n' + query.magenta.bold : '"' + query.magenta.bold + '"'));
 				connection.query(query, function (error, results, fields) {
