@@ -132,7 +132,7 @@ module.exports = (db, config) => {
 			token: 'require;string;token',
 			ext: 'require;string'
 		}, async function (p, req) {
-			const MAX_IMAGE_SIZE = 1024 * 1024 * 3;
+			const MAX_IMAGE_SIZE = 1024 * 1024 * 10;
 			if (req.method !== 'POST')
 				return errObj(1, 'method should be POST');
 
@@ -177,7 +177,7 @@ module.exports = (db, config) => {
 				form.parse(req);
 			});
 			if (file == -1)
-				return errObj(5, 'image is too big (max: 3KB)');
+				return errObj(5, 'image is too big (max: 10KB)');
 
 			// let buffer = await new Promise((resolve, reject) => {
 			// 	let chunks = [];
@@ -237,12 +237,10 @@ module.exports = (db, config) => {
 		}),
 		edit: m({
 			token: 'require;string;token',
-			email: 'optional;string;len=0,4;email',
+			email: 'optional;string;email',
 			about: 'optional;string;len=0,250'
 		}, async function (p) {
-			let newInfo = {};
-			if (p.email) newInfo.email = p.email;
-			if (p.about) newInfo.about = p.about;
+			let newInfo = {email: p.email||'', about: p.about||''};
 			let request = await db.query(`UPDATE \`bodjo-users\`
 									   	  SET ${keys(newInfo).map(k => `\`${k}\` = ${escape(newInfo[k])}`).join(', ')}
 										  WHERE \`username\`=${escape(p.token.username)}`);
