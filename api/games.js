@@ -64,7 +64,8 @@ module.exports = (db, port) => {
 			token: 'require;string;token',
 			name: 'require;string',
 			game: 'require;string',
-			host: 'require;string'
+			host: 'require;string',
+			apihost: 'require;string'
 		}, async function (p) {
 			if (!(await permissions.can(p.token, 'games/new', p)))
 				return errObj(1, 'access denied');
@@ -77,6 +78,7 @@ module.exports = (db, port) => {
 				name: p.name,
 				game: p.game,
 				host: p.host,
+				apihost: p.apihost,
 				secret
 			}
 
@@ -89,7 +91,8 @@ module.exports = (db, port) => {
 			token: 'require;string;token',
 			name: 'require;string',
 			game: 'optional;string',
-			host: 'optional;string'
+			host: 'optional;string',
+			apihost: 'optional;string'
 		}, async function (p) {
 			if (!(await permissions.can(p.token, 'games/edit', p)))
 				return errObj(1, 'access denied');
@@ -101,6 +104,8 @@ module.exports = (db, port) => {
 				newServerInfo.game = p.game;
 			if (typeof p.host === 'string')
 				newServerInfo.host = p.host;
+			if (typeof p.apihost === 'string')
+				newServerInfo.apihost = p.apihost;
 
 			await db.query(`UPDATE \`bodjo-games\`
 							SET ${keys(newServerInfo).map(k => '\`'+k+'\` = ' + escape(newServerInfo[k])).join(', ')}
@@ -110,12 +115,16 @@ module.exports = (db, port) => {
 					servers[p.name].game = p.game;
 				if (typeof p.host === 'string')
 					servers[p.name].host = p.host;
+				if (typeof p.apihost === 'string')
+					servers[p.name].apihost = p.apihost;
 			} else {
 				let info = servers[p.name].advancedInfo();
 				if (typeof p.game === 'string')
 					info.game = p.game;
 				if (typeof p.host === 'string')
 					info.host = p.host;
+				if (typeof p.apihost === 'string')
+					info.apihost = p.apihost;
 
 				// TODO: disconnect socket
 				delete servers[p.name];
@@ -221,6 +230,7 @@ class GameServer {
 		this.game = info.game;
 		this.name = info.name;
 		this.host = info.host;
+		this.apihost = info.apihost;
 		this.secret = info.secret;
 
 		this.__connected = false;
@@ -233,6 +243,7 @@ class GameServer {
 			name: this.name,
 			game: this.game,
 			host: this.host,
+			apihost: this.apihost,
 			status: this.status
 		}
 	}
@@ -241,6 +252,7 @@ class GameServer {
 			name: this.name,
 			game: this.game,
 			host: this.host,
+			apihost: this.apihost,
 			secret: this.secret,
 			status: this.status
 		}
