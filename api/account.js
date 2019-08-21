@@ -159,6 +159,11 @@ module.exports = (db, config) => {
 					autoFiles: false
 				});
 				form.on('part', part => {
+					part.on('error', error => {
+						warn('multipart form data receive error:', error);
+						reject(error);
+					});
+
 					if (part.name != 'image') {
 						part.resume();
 						return;
@@ -173,7 +178,7 @@ module.exports = (db, config) => {
 				form.on('error', error => {
 					warn('multipart form data receive error:', error);
 					reject(error);
-				})
+				});
 				form.parse(req);
 			});
 			if (file == -1)
