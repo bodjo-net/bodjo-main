@@ -92,6 +92,9 @@ module.exports = (db, config) => {
 				email: 'optional;string;email'
 			},
 			async function (p, req) {
+				if (p.username.length > 3 && p.username.slice(0, 3) == 'bot')
+					return errObj(1, '\'username\' should not be with /^bot.+$/g pattern', 'username');
+				
 				let users = await db.query(`SELECT \`username\`
 											FROM \`bodjo-users\`
 											WHERE \`username\`=${escape(p.username)}
