@@ -91,7 +91,7 @@ module.exports = function (instruction, port, db, ssl) {
 			}
 		}
 
-		log(prefix, postprefix, `received ${url.magenta} (${keys(query).map(k=>`${k.green.bold} = ${(query[k]+'').blue.bold}`).join(', ')})`);
+		log(prefix, postprefix, `received ${url.magenta} (${keys(query).map(k=>`${k.green.bold} = ${(k=='password'||k=='token'?'***':(query[k]+'')).blue.bold}`).join(', ')})`);
 		let response = method(query, req, res, db);
 		if (response instanceof Promise) {
 			response
