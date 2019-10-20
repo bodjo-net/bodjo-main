@@ -51,8 +51,8 @@ function includes(arr, b) {
 		if (a == 'all' || a == '*')
 			return true;
 		// docs.* & docs.hello.world.ru
-		if (a[a.length-1] == '*' &&
-			a.substring(0, a.length-1) == b.substring(0, a.length-1))
+		if ((a[a.length-1] == '*' && a.substring(0, a.length-1) == b.substring(0, a.length-1)) || 
+			(a[0] == '*' && a.substring(1) == b.substring(b.length-a.length+1)))
 			return true;
 
 		if (a == b)
