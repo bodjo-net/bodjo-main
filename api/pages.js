@@ -34,6 +34,7 @@ module.exports = (db) => {
 	}),
 	search: m({
 		q: "require;string",
+		lang: "optional;string;len=1,5",
 		count: "optional;number;range=1,10;default=5",
 		offset: "optional;number;default=0",
 		preview: "optional;number;range=1,200;default=0",
@@ -42,7 +43,7 @@ module.exports = (db) => {
 		let previewString = p.preview > 0 ? `LEFT(\`content\`,IF(POSITION('~~~~~' IN \`content\`)>0,POSITION('~~~~~' IN \`content\`)-1,${p.preview}))` : '';
 		let result = await db.query(`SELECT SQL_CALC_FOUND_ROWS \`id\`, \`author\`, \`date-published\`, \`date-edited\`${previewString != '' ? ', '+previewString : ''}
 									 FROM \`bodjo-pages\`
-									 WHERE LOCATE(${escape(p.q)}, \`id\`)>0
+									 WHERE LOCATE(${escape(p.q)}, \`id\`)>0 ${p.lang?'AND RIGHT(\`id\`, 2)='+escape(p.lang):''}
 									 ORDER BY \`id\` ${p.order?'ASC':'DESC'}
 									 LIMIT ${p.count}
 									 OFFSET ${p.offset}`);

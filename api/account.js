@@ -131,6 +131,14 @@ module.exports = (db, config) => {
 				});
 			}
 		),
+		changePassword: m({
+			token: 'optional;string;token',
+			current: 'optional;string;len=6,100',
+			secret: 'optional;string;len=32,32',
+			new: 'require;string;len=6,100'
+		}, async function (p) {
+			
+		}),
 		uploadImage: m({
 			token: 'require;string;token',
 			ext: 'require;string'
