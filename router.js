@@ -56,7 +56,7 @@ module.exports = function (instruction, port, db, ssl) {
 		}
 
 		let method = api[dirs[1]];
-		let postprefix = '{'+(req.connection.remoteAddress+'').grey.bold+'}';
+		let postprefix = randomString(3).magenta.bold + ' {'+(req.connection.remoteAddress+'').grey.bold+'}';
 		function answer(o) {
 			if (res.connection.destroyed ||
 				res.connection.finished) {
@@ -155,7 +155,9 @@ function parseQueryString(str) {
 		let key = decodeURIComponent(param.indexOf('=') >= 0 ? param.substring(0,param.indexOf('=')) : param);
 		let value = decodeURIComponent(param.indexOf('=') >= 0 ? param.substring(param.indexOf('=')+1) : 'true');
 		value = value.replace(/[\u0800-\uFFFF]/g, '');
-		if (/^[\d\.\,]+$/.test(value.trim()) && (value.match(/\./g)||[]).length <= 1) {
+		if (/^\d{1,}[.,]{0,}\d{0,}$/.test(value.trim()) && 
+			value.length < 20 && 
+			(value.match(/\./g)||[]).length <= 1) {
 			try {
 				let parseTrying = parseFloat(value);
 				if (!isNaN(parseTrying))

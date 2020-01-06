@@ -14,7 +14,13 @@ module.exports = (imageDirectory, imagesURL) => {
 	}
 	
 	return {
-		generate: function (username) {
+		generate: function (username, url) {
+			if (url != null) {
+				let res = this.download(url);
+				if (res)
+					return res;
+			}
+
 			log(prefix, 'generating ' + username.cyan.bold + ' icon');
 
 			let random = seedrandom(username);
@@ -76,7 +82,7 @@ module.exports = (imageDirectory, imagesURL) => {
 				fs.writeFileSync(filename, buffer);
 			}
 
-			return ID;
+			return ID + '|png';
 		},
 		get: function (imageid) {
 			let id = imageid.split('|')[0];
